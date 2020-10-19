@@ -2057,7 +2057,8 @@ function submit_line_input(win, val, termkey) {
       win.history.shift();
     }
   }
-
+  
+  TabMode.reset(val);
   send_response('line', win, val, termkey);
 }
 
@@ -2723,6 +2724,81 @@ function evhan_input_char_keypress(ev) {
   return false;
 }
 
+TabMode = {
+        enabled: false,
+        tabModePrevHistoryValues: [],
+        tabModePrefix: '',
+        matchedWords: [],
+
+        getWords: function() {
+            var words = [];
+            jQuery('.Style_normal, .Style_input').each(function() {
+                let text = jQuery(this).text();
+                let matches = text.match(/(^|[\s\"\'])([a-z_0-9]{2,})(?=$|[\s\"\'\,\.])/ig);
+                for (var i in matches) {
+                    let word = matches[i].trim();
+                    word = word.replace(/[\"\'\.]/g, '');
+                    words.push(word);
+                }
+            });
+
+            return TabMode.matchedWords.concat(words.filter(function(value, index, self) {
+                return self.indexOf(value) === index;
+            }));
+        },
+
+        addToMatchedWords: function(word) {
+            console.log('added to matched words', word);
+            let matchedWordsRev = TabMode.matchedWords.reverse();
+            matchedWordsRev.push(word.trim());
+            TabMode.matchedWords = matchedWordsRev.reverse();
+        },
+
+        reset: function(currentValue) {
+            console.log('Tab reset called', currentValue);
+            TabMode.enabled = false;
+            TabMode.tabModePrevHistoryValues = [];
+            TabMode.tabModePrefix = false;
+            if (currentValue !== false && currentValue != '') {
+                const val = currentValue.trim();
+                const valWords = val.split(' ');
+                for (var i in valWords) {
+                    let valWord = valWords[i].trim();
+                    if (valWord != '') {
+                        TabMode.addToMatchedWords(valWord);
+                    }
+                }
+            }
+        },
+
+        enable: function(prefix) {
+            TabMode.reset(false);
+            TabMode.enabled = true;
+            TabMode.tabModePrefix = prefix;
+        },
+
+        getNextSuggestion: function() {
+            const words = TabMode.getWords();
+
+            for (var i in words) {
+                if (words[i].startsWith(TabMode.tabModePrefix) && TabMode.tabModePrevHistoryValues.indexOf(words[i]) == -1) {
+                    TabMode.tabModePrevHistoryValues.push(words[i]);
+                    return words[i];
+                }
+            }
+
+            TabMode.tabModePrevHistoryValues = [];
+            for (var i in words) {
+                if (words[i].startsWith(TabMode.tabModePrefix) && TabMode.tabModePrevHistoryValues.indexOf(words[i]) == -1) {
+                    TabMode.tabModePrevHistoryValues.push(words[i]);
+                    return words[i];
+                }
+            }
+
+            return '';
+        }
+    };
+
 /* Event handler: keydown events on input fields (line input)
 
    Divert the up and down arrow keys to scroll through the command history
@@ -2732,12 +2808,55 @@ function evhan_input_keydown(ev) {
   if (ev) keycode = ev.keyCode; //### ev.which?
   if (!keycode) return true;
 
-  if (keycode == key_codes.KEY_UP || keycode == key_codes.KEY_DOWN) {
+  if (keycode == key_codes.KEY_TAB) {
+            var winid = $(this).data('winid');
+            var win = windowdic[winid];
+            if (!win || !win.input)
+                return true;
+
+            if (TabMode.enabled) {
+                const val = this.value.trim();
+                const lastSpace = val.lastIndexOf(" ");
+                var valTrimmed = '';
+
+                if (lastSpace != -1) {
+                    valTrimmed = val.substring(0, lastSpace + 1);
+                }
+
+                const nextSuggestion = TabMode.getNextSuggestion();
+                if (nextSuggestion != '') {
+                    this.value = valTrimmed + nextSuggestion;
+                }
+
+            } else {
+                const val = this.value.trim();
+                const lastSpace = val.lastIndexOf(" ");
+                var lastWord = val;
+                var valTrimmed = '';
+
+                if (lastSpace != -1) {
+                    lastWord = val.substring(lastSpace + 1);
+                    valTrimmed = val.substring(0, lastSpace + 1);
+                }
+
+                if (lastWord != '') {
+                    TabMode.enable(lastWord);
+                }
+
+                const nextSuggestion = TabMode.getNextSuggestion();
+                if (nextSuggestion != '') {
+                    this.value = valTrimmed + nextSuggestion;
+                }
+            }
+
+            return false;
+    } else if (keycode == key_codes.KEY_UP || keycode == key_codes.KEY_DOWN) {
     var winid = $(this).data('winid');
     var win = windowdic[winid];
     if (!win || !win.input)
       return true;
 
+    TabMode.reset(false);
     if (keycode == key_codes.KEY_UP && win.historypos > 0) {
       win.historypos -= 1;
       if (win.historypos < win.history.length)
@@ -2770,6 +2889,7 @@ function evhan_input_keydown(ev) {
     }
   }
 
+  TabMode.reset(false);
   return true;
 }
 
