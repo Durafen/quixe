@@ -2741,21 +2741,21 @@ TabMode = {
                     words.push(word);
                 }
             });
-
+            
+            words = words.reverse();
+            
             return TabMode.matchedWords.concat(words.filter(function(value, index, self) {
                 return self.indexOf(value) === index;
             }));
         },
 
         addToMatchedWords: function(word) {
-            console.log('added to matched words', word);
             let matchedWordsRev = TabMode.matchedWords.reverse();
             matchedWordsRev.push(word.trim());
             TabMode.matchedWords = matchedWordsRev.reverse();
         },
 
         reset: function(currentValue) {
-            console.log('Tab reset called', currentValue);
             TabMode.enabled = false;
             TabMode.tabModePrevHistoryValues = [];
             TabMode.tabModePrefix = false;
