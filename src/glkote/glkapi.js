@@ -2836,13 +2836,13 @@ function gli_window_put_string(win, val) {
                gli_window_grid_canonicalize(), but I've inlined it. */
             if (win.cursorx < 0)
                 win.cursorx = 0;
-            else if (win.cursorx >= win.gridwidth) {
+            if (win.cursorx >= win.gridwidth) {
                 win.cursorx = 0;
                 win.cursory++;
             }
             if (win.cursory < 0)
                 win.cursory = 0;
-            else if (win.cursory >= win.gridheight)
+            if (win.cursory >= win.gridheight)
                 break; /* outside the window */
 
             if (ch == "\n") {
@@ -2875,13 +2875,13 @@ function gli_window_put_string(win, val) {
 function gli_window_grid_canonicalize(win) {
     if (win.cursorx < 0)
         win.cursorx = 0;
-    else if (win.cursorx >= win.gridwidth) {
+    if (win.cursorx >= win.gridwidth) {
         win.cursorx = 0;
         win.cursory++;
     }
     if (win.cursory < 0)
         win.cursory = 0;
-    else if (win.cursory >= win.gridheight)
+    if (win.cursory >= win.gridheight)
         return true; /* outside the window */
     return false;
 }

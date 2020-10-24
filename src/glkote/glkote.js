@@ -365,7 +365,7 @@ function measure_window() {
   var bufwin = $('<div>', {'class': 'WindowFrame BufferWindow'});
   var bufline1 = line.clone().addClass('BufferLine').appendTo(bufwin);
   var bufline2 = line.clone().addClass('BufferLine').appendTo(bufwin);
-  var invcurspan = $('<span>', {'class': 'InvisibleCursor'}).text(NBSP);
+  var invcurspan = $('<span>', {'class': 'InvisibleCursor'});
   bufline2.append(invcurspan);
   var bufspan = bufline1.children('span');
   layout_test_pane.append(bufwin);
@@ -392,9 +392,9 @@ function measure_window() {
   line1size = get_size(gridline1);
   line2size = get_size(gridline2);
 
-  metrics.gridcharheight = gridline2.position().top - gridline1.position().top;
-  metrics.gridcharwidth = gridspan.width() / 8;
-  /* Yes, we can wind up with a non-integer charwidth value. */
+  metrics.gridcharheight = Math.max(1, gridline2.position().top - gridline1.position().top);
+  metrics.gridcharwidth = Math.max(1, gridspan.width() / 8);
+  /* Yes, we can wind up with a non-integer charwidth value. But we force the value to be >= 1; zero can lead to annoying NaNs later on. */
 
   /* Find the total margin around the character grid (out to the window's
      padding/border). These values include both sides (left+right,
@@ -409,18 +409,13 @@ function measure_window() {
   line2size = get_size(bufline2);
   invcursize = get_size(invcurspan);    
 
-  metrics.buffercharheight = bufline2.position().top - bufline1.position().top;
-  metrics.buffercharwidth = bufspan.width() / 8;
-  /* Yes, we can wind up with a non-integer charwidth value. */
+  metrics.buffercharheight = Math.max(1, bufline2.position().top - bufline1.position().top);
+  metrics.buffercharwidth = Math.max(1, bufspan.width() / 8);
+  /* Again, at least 1, but not necessarily integer. */
 
   /* Again, these values include both sides (left+right, top+bottom). */
   metrics.buffermarginx = winsize.width - spansize.width;
   metrics.buffermarginy = winsize.height - (line1size.height + line2size.height);
-  /* Add extra for the InvisibleCursor. This is hacky, but I have to do it this way because the height doesn't seem to show up in line2size. */
-  var extra = Math.ceil(invcursize.height - line2size.height);
-  if (extra > 0) {
-    metrics.buffermarginy += extra;
-  }
 
   /* Here we will include padding and border. */
   winsize = get_size(graphwin);
@@ -858,7 +853,7 @@ function accept_one_window(arg) {
     var rockclass = 'WindowRock_' + arg.rock;
     frameel = $('<div>',
       { id: 'window'+arg.id,
-        'class': 'WindowFrame ' + typeclass + ' ' + rockclass });
+        'class': 'WindowFrame HasNoInputField ' + typeclass + ' ' + rockclass });
     frameel.data('winid', arg.id);
     frameel.on('mousedown', arg.id, evhan_window_mousedown);
     if (perform_paging && win.type == 'buffer')
@@ -1152,6 +1147,9 @@ function accept_one_content(arg) {
        between an empty paragraph and one which truly contains a NBSP.
        (The difference is, when you append data to a truly empty paragraph,
        you have to delete the placeholder NBSP.)
+
+       We also give the paragraph div the BlankPara class, in case
+       CSS cares.
     */
 
     for (ix=0; ix<text.length; ix++) {
@@ -1165,12 +1163,13 @@ function accept_one_content(arg) {
       }
       if (divel == null) {
         /* Create a new paragraph div */
-        divel = $('<div>', { 'class': 'BufferLine' });
+        divel = $('<div>', { 'class': 'BufferLine BlankPara' });
         divel.data('blankpara', true);
         win.frameel.append(divel);
       }
-      if (textarg.flowbreak)
+      if (textarg.flowbreak) {
         divel.addClass('FlowBreak');
+      }
       if (!content || !content.length) {
         if (divel.data('blankpara'))
           divel.append($('<span>', { 'class':'BlankLineSpan' }).text(NBSP));
@@ -1178,6 +1177,7 @@ function accept_one_content(arg) {
       }
       if (divel.data('blankpara')) {
         divel.data('blankpara', false);
+        divel.removeClass('BlankPara');
         divel.empty();
       }
       for (sx=0; sx<content.length; sx++) {
@@ -1289,9 +1289,8 @@ function accept_one_content(arg) {
        paragraph div. We use this to position the input box. */
     var divel = buffer_last_line(win);
     if (divel) {
-      cursel = $('<span>',
+      var cursel = $('<span>',
         { id: 'win'+win.id+'_cursor', 'class': 'InvisibleCursor' } );
-      cursel.append(NBSP);
       divel.append(cursel);
 
       if (win.inputel) {
@@ -1310,6 +1309,8 @@ function accept_one_content(arg) {
           left: '0px', top: '0px', width: width+'px' });
         cursel.append(inputel);
       }
+
+      cursel = null;
     }
   }
 
@@ -1365,6 +1366,8 @@ function accept_inputcancel(arg) {
       if (argi == null || argi.gen > win.input.gen) {
         /* cancel this input. */
         win.input = null;
+        win.frameel.addClass('HasNoInputField');
+        win.frameel.removeClass('HasInputField');
         if (win.inputel) {
           win.inputel.remove();
           win.inputel = null;
@@ -1398,6 +1401,8 @@ function accept_inputset(arg) {
     if (argi == null)
       return;
     win.input = argi;
+    win.frameel.addClass('HasInputField');
+    win.frameel.removeClass('HasNoInputField');
 
     /* Maximum number of characters to accept. */
     var maxlen = 1;
@@ -1473,10 +1478,12 @@ function accept_inputset(arg) {
 
     if (win.type == 'buffer') {
       var cursel = $('#win'+win.id+'_cursor', dom_context);
+      /* Check to make sure an InvisibleCursor exists on the last line.
+         The only reason it might not is if the window is entirely blank
+         (no lines). In that case, append one to the window frame itself. */
       if (!cursel.length) {
         cursel = $('<span>',
           { id: 'win'+win.id+'_cursor', 'class': 'InvisibleCursor' } );
-        cursel.append(NBSP);
         win.frameel.append(cursel);
       }
       var pos = cursel.position();
@@ -1552,7 +1559,7 @@ function buffer_last_line(win) {
   if (divel == null)
     return null;
   /* If the sole child is the PreviousMark, there are no BufferLines. */
-  if (divel.className != 'BufferLine')
+  if (divel.className.indexOf('BufferLine') < 0)
     return null;
   return $(divel);
 }
@@ -2547,12 +2554,6 @@ function evhan_window_mousedown(ev) {
 
   if (win.inputel) {
     last_known_focus = win.id;
-    if (0 /*###Prototype.Browser.MobileSafari*/) {
-      ev.preventDefault();
-      //glkote_log("### focus to " + win.id);
-      //### This doesn't always work, blah
-      win.inputel.focus();
-    }
   }
 
   if (win.needspaging)
