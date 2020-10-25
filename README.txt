@@ -1,5 +1,12 @@
 Quixe -- a Glulx VM interpreter written in Javascript
 
+*** Fork Notes ***
+Added:
+- auto competition with tab and shift tab.
+- History search with shift up and shift down.
+
+
+
 Quixe Library: version 2.1.7.
 Designed by Andrew Plotkin <erkyrath@eblong.com>.
 (Storage and heap-management code contributed by Iain Merrick.)
