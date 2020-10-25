@@ -2970,8 +2970,10 @@ function evhan_input_keydown(ev) {
           }
         }
         
-        HistoryPrefixMode.historyPos = 0;
-        this.value = HistoryPrefixMode.options[0];
+        if (HistoryPrefixMode.options.length > 0) {
+          HistoryPrefixMode.historyPos = 0;
+          this.value = HistoryPrefixMode.options[0];
+        }
         return false;
       }
     }
