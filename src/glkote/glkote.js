@@ -2726,79 +2726,99 @@ function evhan_input_char_keypress(ev) {
 }
 
 TabMode = {
-        enabled: false,
-        tabModePrevHistoryValues: [],
-        tabModePrefix: '',
-        matchedWords: [],
-
-        getWords: function() {
-            var words = [];
-            jQuery('.Style_normal, .Style_input').each(function() {
-                let text = jQuery(this).text();
-                let matches = text.match(/(^|[\s\"\'])([a-z_0-9]{2,})(?=$|[\s\"\'\,\.])/ig);
-                for (var i in matches) {
-                    let word = matches[i].trim();
-                    word = word.replace(/[\"\'\.]/g, '');
-                    words.push(word);
-                }
-            });
-            
-            words = words.reverse();
-            
-            return TabMode.matchedWords.concat(words.filter(function(value, index, self) {
-                return self.indexOf(value) === index;
-            }));
-        },
-
-        addToMatchedWords: function(word) {
-            let matchedWordsRev = TabMode.matchedWords.reverse();
-            matchedWordsRev.push(word.trim());
-            TabMode.matchedWords = matchedWordsRev.reverse();
-        },
-
-        reset: function(currentValue) {
-            TabMode.enabled = false;
-            TabMode.tabModePrevHistoryValues = [];
-            TabMode.tabModePrefix = false;
-            if (currentValue !== false && currentValue != '') {
-                const val = currentValue.trim();
-                const valWords = val.split(' ');
-                for (var i in valWords) {
-                    let valWord = valWords[i].trim();
-                    if (valWord != '') {
-                        TabMode.addToMatchedWords(valWord);
-                    }
-                }
-            }
-        },
-
-        enable: function(prefix) {
-            TabMode.reset(false);
-            TabMode.enabled = true;
-            TabMode.tabModePrefix = prefix;
-        },
-
-        getNextSuggestion: function() {
-            const words = TabMode.getWords();
-
-            for (var i in words) {
-                if (words[i].startsWith(TabMode.tabModePrefix) && TabMode.tabModePrevHistoryValues.indexOf(words[i]) == -1) {
-                    TabMode.tabModePrevHistoryValues.push(words[i]);
-                    return words[i];
-                }
-            }
-
-            TabMode.tabModePrevHistoryValues = [];
-            for (var i in words) {
-                if (words[i].startsWith(TabMode.tabModePrefix) && TabMode.tabModePrevHistoryValues.indexOf(words[i]) == -1) {
-                    TabMode.tabModePrevHistoryValues.push(words[i]);
-                    return words[i];
-                }
-            }
-
-            return '';
+  enabled: false,
+  tabModePrevHistoryValues: [],
+  tabModePrefix: '',
+  matchedWords: [],
+  suggestions: [],
+  suggestionId: -1,
+  
+  getWords: function() {
+    var words = [];
+    jQuery('.Style_normal, .Style_input').each(function() {
+        let text = jQuery(this).text();
+        let matches = text.match(/(^|[\s\"\'])([a-z_0-9]{2,})(?=$|[\s\"\'\,\.])/ig);
+        for (var i in matches) {
+            let word = matches[i].trim();
+            word = word.replace(/[\"\'\.]/g, '');
+            words.push(word);
         }
-    };
+    });
+    
+    words = words.reverse();
+    
+    return TabMode.matchedWords.concat(words.filter(function(value, index, self) {
+        return self.indexOf(value) === index;
+    }));
+  },
+
+  addToMatchedWords: function(word) {
+    let matchedWordsRev = TabMode.matchedWords.reverse();
+    matchedWordsRev.push(word.trim());
+    TabMode.matchedWords = matchedWordsRev.reverse();
+  },
+
+  reset: function(currentValue) {
+    TabMode.enabled = false;
+    TabMode.tabModePrevHistoryValues = [];
+    TabMode.tabModePrefix = false;
+    if (currentValue !== false && currentValue != '') {
+        const val = currentValue.trim();
+        const valWords = val.split(' ');
+        for (var i in valWords) {
+            let valWord = valWords[i].trim();
+            if (valWord != '') {
+                TabMode.addToMatchedWords(valWord);
+            }
+        }
+    }
+  },
+
+  enable: function(prefix) {
+    TabMode.reset(false);
+    TabMode.enabled = true;
+    TabMode.tabModePrefix = prefix;
+    TabMode.buildSuggestions();
+  },
+
+  getNextSuggestion: function () {
+    if (TabMode.suggestions.length == 0) {
+      return '';
+    }
+    
+    TabMode.suggestionId++;
+    if (TabMode.suggestionId >= TabMode.suggestions.length) {
+      TabMode.suggestionId = 0;
+    }
+    
+    return TabMode.suggestions[TabMode.suggestionId];
+  },
+  
+  getPrevSuggestion: function () {
+    if (TabMode.suggestions.length == 0) {
+      return '';
+    }
+    
+    TabMode.suggestionId--;
+    if (TabMode.suggestionId < 0) {
+      TabMode.suggestionId = TabMode.suggestions.length-1;
+    }
+    
+    return TabMode.suggestions[TabMode.suggestionId];
+  },
+  
+  buildSuggestions: function () {
+    TabMode.suggestions = [];
+    const words = TabMode.getWords();
+    const tabModePrefix = TabMode.tabModePrefix.toLowerCase();
+  
+    for (var i in words) {
+      if (words[i].toLowerCase().startsWith(tabModePrefix) && TabMode.suggestions.indexOf(words[i]) == -1) {
+        TabMode.suggestions.push(words[i]);
+      }
+    }
+  }
+};
 
 /* Event handler: keydown events on input fields (line input)
 
@@ -2808,55 +2828,97 @@ function evhan_input_keydown(ev) {
   var keycode = 0;
   if (ev) keycode = ev.keyCode; //### ev.which?
   if (!keycode) return true;
+  
+  if (keycode == key_codes.KEY_PAGEUP) {
+    var winid = $(this).data('winid');
+    var win = windowdic[winid];
+    if (!win || !win.input)
+      return true;
+      
+    if (TabMode.enabled) {
+      const val = this.value.trim();
+      const lastSpace = val.lastIndexOf(" ");
+      var valTrimmed = '';
 
-  if (keycode == key_codes.KEY_TAB) {
-            var winid = $(this).data('winid');
-            var win = windowdic[winid];
-            if (!win || !win.input)
-                return true;
+      if (lastSpace != -1) {
+        valTrimmed = val.substring(0, lastSpace + 1);
+      }
 
-            if (TabMode.enabled) {
-                const val = this.value.trim();
-                const lastSpace = val.lastIndexOf(" ");
-                var valTrimmed = '';
+      const nextSuggestion = TabMode.getPrevSuggestion();
+      if (nextSuggestion != '') {
+        this.value = valTrimmed + nextSuggestion;
+      }
+          
+    } else {
+      const val = this.value.trim();
+      const lastSpace = val.lastIndexOf(" ");
+      var lastWord = val;
+      var valTrimmed = '';
 
-                if (lastSpace != -1) {
-                    valTrimmed = val.substring(0, lastSpace + 1);
-                }
+      if (lastSpace != -1) {
+        lastWord = val.substring(lastSpace + 1);
+        valTrimmed = val.substring(0, lastSpace + 1);
+      }
 
-                const nextSuggestion = TabMode.getNextSuggestion();
-                if (nextSuggestion != '') {
-                    this.value = valTrimmed + nextSuggestion;
-                }
+      if (lastWord != '') {
+        TabMode.enable(lastWord);
+      }
 
-            } else {
-                const val = this.value.trim();
-                const lastSpace = val.lastIndexOf(" ");
-                var lastWord = val;
-                var valTrimmed = '';
+      const nextSuggestion = TabMode.getPrevSuggestion();
+      if (nextSuggestion != '') {
+        this.value = valTrimmed + nextSuggestion;
+      }
+    }
+      
+    return false;
+  } else if (keycode == key_codes.KEY_TAB || keycode == key_codes.KEY_PAGEDOWN) {
+    var winid = $(this).data('winid');
+      var win = windowdic[winid];
+      if (!win || !win.input)
+          return true;
+      
+      if (TabMode.enabled) {
+          const val = this.value.trim();
+          const lastSpace = val.lastIndexOf(" ");
+          var valTrimmed = '';
 
-                if (lastSpace != -1) {
-                    lastWord = val.substring(lastSpace + 1);
-                    valTrimmed = val.substring(0, lastSpace + 1);
-                }
+          if (lastSpace != -1) {
+              valTrimmed = val.substring(0, lastSpace + 1);
+          }
 
-                if (lastWord != '') {
-                    TabMode.enable(lastWord);
-                }
+          const nextSuggestion = TabMode.getNextSuggestion();
+          if (nextSuggestion != '') {
+              this.value = valTrimmed + nextSuggestion;
+          }
+          
+      } else {
+          const val = this.value.trim();
+          const lastSpace = val.lastIndexOf(" ");
+          var lastWord = val;
+          var valTrimmed = '';
 
-                const nextSuggestion = TabMode.getNextSuggestion();
-                if (nextSuggestion != '') {
-                    this.value = valTrimmed + nextSuggestion;
-                }
-            }
+          if (lastSpace != -1) {
+              lastWord = val.substring(lastSpace + 1);
+              valTrimmed = val.substring(0, lastSpace + 1);
+          }
 
-            return false;
+          if (lastWord != '') {
+              TabMode.enable(lastWord);
+          }
+
+          const nextSuggestion = TabMode.getNextSuggestion();
+          if (nextSuggestion != '') {
+              this.value = valTrimmed + nextSuggestion;
+          }
+      }
+      
+      return false;
     } else if (keycode == key_codes.KEY_UP || keycode == key_codes.KEY_DOWN) {
     var winid = $(this).data('winid');
     var win = windowdic[winid];
     if (!win || !win.input)
       return true;
-
+    
     TabMode.reset(false);
     if (keycode == key_codes.KEY_UP && win.historypos > 0) {
       win.historypos -= 1;
