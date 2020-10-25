@@ -2066,6 +2066,7 @@ function submit_line_input(win, val, termkey) {
   }
   
   TabMode.reset(val);
+  TabMode.textEntered = false;
   send_response('line', win, val, termkey);
 }
 
@@ -2727,11 +2728,11 @@ function evhan_input_char_keypress(ev) {
 
 TabMode = {
   enabled: false,
-  tabModePrevHistoryValues: [],
   tabModePrefix: '',
   matchedWords: [],
   suggestions: [],
   suggestionId: -1,
+  textEntered: false,
   
   getWords: function() {
     var words = [];
@@ -2760,8 +2761,8 @@ TabMode = {
 
   reset: function(currentValue) {
     TabMode.enabled = false;
-    TabMode.tabModePrevHistoryValues = [];
     TabMode.tabModePrefix = false;
+    TabMode.suggestionId = -1;
     if (currentValue !== false && currentValue != '') {
         const val = currentValue.trim();
         const valWords = val.split(' ');
@@ -2787,11 +2788,18 @@ TabMode = {
     }
     
     TabMode.suggestionId++;
+    
     if (TabMode.suggestionId >= TabMode.suggestions.length) {
       TabMode.suggestionId = 0;
     }
     
-    return TabMode.suggestions[TabMode.suggestionId];
+    let suggestion = TabMode.suggestions[TabMode.suggestionId];
+    
+    if (TabMode.suggestionId >= TabMode.suggestions.length) {
+      TabMode.suggestionId = 0;
+    }
+    
+    return suggestion;
   },
   
   getPrevSuggestion: function () {
@@ -2799,12 +2807,19 @@ TabMode = {
       return '';
     }
     
-    TabMode.suggestionId--;
-    if (TabMode.suggestionId < 0) {
-      TabMode.suggestionId = TabMode.suggestions.length-1;
+    if (TabMode.suggestionId == -1) {
+      TabMode.suggestionId = TabMode.suggestions.length - 1;
+    } else {
+      TabMode.suggestionId--;
     }
     
-    return TabMode.suggestions[TabMode.suggestionId];
+    if (TabMode.suggestionId < 0) {
+      TabMode.suggestionId = TabMode.suggestions.length - 1;
+    }
+    
+    let suggestion = TabMode.suggestions[TabMode.suggestionId];
+    
+    return suggestion;
   },
   
   buildSuggestions: function () {
@@ -2829,7 +2844,7 @@ function evhan_input_keydown(ev) {
   if (ev) keycode = ev.keyCode; //### ev.which?
   if (!keycode) return true;
   
-  if (keycode == key_codes.KEY_PAGEUP) {
+  if (keycode == key_codes.KEY_UP && ev.shiftKey) {
     var winid = $(this).data('winid');
     var win = windowdic[winid];
     if (!win || !win.input)
@@ -2871,49 +2886,44 @@ function evhan_input_keydown(ev) {
     }
       
     return false;
-  } else if (keycode == key_codes.KEY_TAB || keycode == key_codes.KEY_PAGEDOWN) {
-    var winid = $(this).data('winid');
-      var win = windowdic[winid];
-      if (!win || !win.input)
-          return true;
-      
-      if (TabMode.enabled) {
-          const val = this.value.trim();
-          const lastSpace = val.lastIndexOf(" ");
-          var valTrimmed = '';
+  } else if (keycode == key_codes.KEY_TAB || (keycode == key_codes.KEY_DOWN && ev.shiftKey)) {
+    if (TabMode.enabled) {
+        const val = this.value.trim();
+        const lastSpace = val.lastIndexOf(" ");
+        var valTrimmed = '';
 
-          if (lastSpace != -1) {
-              valTrimmed = val.substring(0, lastSpace + 1);
-          }
+        if (lastSpace != -1) {
+            valTrimmed = val.substring(0, lastSpace + 1);
+        }
 
-          const nextSuggestion = TabMode.getNextSuggestion();
-          if (nextSuggestion != '') {
-              this.value = valTrimmed + nextSuggestion;
-          }
-          
-      } else {
-          const val = this.value.trim();
-          const lastSpace = val.lastIndexOf(" ");
-          var lastWord = val;
-          var valTrimmed = '';
+        const nextSuggestion = TabMode.getNextSuggestion();
+        if (nextSuggestion != '') {
+            this.value = valTrimmed + nextSuggestion;
+        }
+        
+    } else {
+        const val = this.value.trim();
+        const lastSpace = val.lastIndexOf(" ");
+        var lastWord = val;
+        var valTrimmed = '';
 
-          if (lastSpace != -1) {
-              lastWord = val.substring(lastSpace + 1);
-              valTrimmed = val.substring(0, lastSpace + 1);
-          }
+        if (lastSpace != -1) {
+            lastWord = val.substring(lastSpace + 1);
+            valTrimmed = val.substring(0, lastSpace + 1);
+        }
 
-          if (lastWord != '') {
-              TabMode.enable(lastWord);
-          }
+        if (lastWord != '') {
+            TabMode.enable(lastWord);
+        }
 
-          const nextSuggestion = TabMode.getNextSuggestion();
-          if (nextSuggestion != '') {
-              this.value = valTrimmed + nextSuggestion;
-          }
-      }
-      
-      return false;
-    } else if (keycode == key_codes.KEY_UP || keycode == key_codes.KEY_DOWN) {
+        const nextSuggestion = TabMode.getNextSuggestion();
+        if (nextSuggestion != '') {
+            this.value = valTrimmed + nextSuggestion;
+        }
+    }
+    
+    return false;
+  } else if (keycode == key_codes.KEY_UP || keycode == key_codes.KEY_DOWN) {
     var winid = $(this).data('winid');
     var win = windowdic[winid];
     if (!win || !win.input)
@@ -2951,8 +2961,11 @@ function evhan_input_keydown(ev) {
       return false;
     }
   }
-
-  TabMode.reset(false);
+  
+  // Ignore shift for reset
+  if (keycode != 16) {
+    TabMode.reset(false);
+  }
   return true;
 }
 
