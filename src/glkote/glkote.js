@@ -2065,8 +2065,8 @@ function submit_line_input(win, val, termkey) {
     }
   }
   
+  HistoryPrefixMode.reset();
   TabMode.reset(val);
-  TabMode.textEntered = false;
   send_response('line', win, val, termkey);
 }
 
@@ -2732,16 +2732,15 @@ TabMode = {
   matchedWords: [],
   suggestions: [],
   suggestionId: -1,
-  textEntered: false,
   
   getWords: function() {
     var words = [];
     jQuery('.Style_normal, .Style_input').each(function() {
         let text = jQuery(this).text();
-        let matches = text.match(/(^|[\s\"\'])([a-z_0-9]{2,})(?=$|[\s\"\'\,\.])/ig);
+        let matches = text.match(/(^|[\s\"\':])([a-z_0-9]{2,})(?=$|[\s\"\'\,\.:])/ig);
         for (var i in matches) {
             let word = matches[i].trim();
-            word = word.replace(/[\"\'\.]/g, '');
+            word = word.replace(/[\"\'\.:]/g, '');
             words.push(word);
         }
     });
@@ -2753,7 +2752,8 @@ TabMode = {
     }));
   },
 
-  addToMatchedWords: function(word) {
+  addToMatchedWords: function (word) {
+    word = word.replace(/[\"\'\.:]/g, '');
     let matchedWordsRev = TabMode.matchedWords.reverse();
     matchedWordsRev.push(word.trim());
     TabMode.matchedWords = matchedWordsRev.reverse();
@@ -2835,6 +2835,19 @@ TabMode = {
   }
 };
 
+HistoryPrefixMode = {
+  enabled: false,
+  prefix: "",
+  historyPos: -1,
+  options: [],
+  reset: function () {
+    HistoryPrefixMode.enabled = false;
+    HistoryPrefixMode.prefix = "";
+    HistoryPrefixMode.historyPos = -1;
+    HistoryPrefixMode.options = [];
+  }
+};
+
 /* Event handler: keydown events on input fields (line input)
 
    Divert the up and down arrow keys to scroll through the command history
@@ -2844,7 +2857,7 @@ function evhan_input_keydown(ev) {
   if (ev) keycode = ev.keyCode; //### ev.which?
   if (!keycode) return true;
   
-  if (keycode == key_codes.KEY_UP && ev.shiftKey) {
+  if (keycode == key_codes.KEY_TAB && ev.shiftKey) {
     var winid = $(this).data('winid');
     var win = windowdic[winid];
     if (!win || !win.input)
@@ -2886,7 +2899,7 @@ function evhan_input_keydown(ev) {
     }
       
     return false;
-  } else if (keycode == key_codes.KEY_TAB || (keycode == key_codes.KEY_DOWN && ev.shiftKey)) {
+  } else if (keycode == key_codes.KEY_TAB) {
     if (TabMode.enabled) {
         const val = this.value.trim();
         const lastSpace = val.lastIndexOf(" ");
@@ -2930,7 +2943,41 @@ function evhan_input_keydown(ev) {
       return true;
     
     TabMode.reset(false);
+    if (ev.shiftKey && this.value != '') {
+      if (HistoryPrefixMode.enabled && HistoryPrefixMode.options.length > 0) {
+        if (keycode == key_codes.KEY_UP) {
+          HistoryPrefixMode.historyPos--;
+          if (HistoryPrefixMode.historyPos < 0) {
+            HistoryPrefixMode.historyPos = HistoryPrefixMode.options.length - 1;
+          }
+        } else {
+          HistoryPrefixMode.historyPos++;
+          if (HistoryPrefixMode.historyPos > HistoryPrefixMode.options.length - 1) {
+            HistoryPrefixMode.historyPos = 0
+          }
+        }
+        
+        this.value = HistoryPrefixMode.options[HistoryPrefixMode.historyPos];
+        return false;
+      } else {
+        HistoryPrefixMode.reset();
+        HistoryPrefixMode.enabled = true;
+        HistoryPrefixMode.options = [];
+        HistoryPrefixMode.prefix = this.value.trim();
+        for (var i in win.history) {
+          if (win.history[i].toLowerCase().startsWith(HistoryPrefixMode.prefix.toLowerCase()) != false) {
+            HistoryPrefixMode.options.push(win.history[i]);
+          }
+        }
+        
+        HistoryPrefixMode.historyPos = 0;
+        this.value = HistoryPrefixMode.options[0];
+        return false;
+      }
+    }
+    
     if (keycode == key_codes.KEY_UP && win.historypos > 0) {
+      HistoryPrefixMode.reset();
       win.historypos -= 1;
       if (win.historypos < win.history.length)
         this.value = win.history[win.historypos];
@@ -2939,6 +2986,7 @@ function evhan_input_keydown(ev) {
     }
 
     if (keycode == key_codes.KEY_DOWN && win.historypos < win.history.length) {
+      HistoryPrefixMode.reset();
       win.historypos += 1;
       if (win.historypos < win.history.length)
         this.value = win.history[win.historypos];
@@ -2965,7 +3013,9 @@ function evhan_input_keydown(ev) {
   // Ignore shift for reset
   if (keycode != 16) {
     TabMode.reset(false);
+    HistoryPrefixMode.reset();
   }
+  
   return true;
 }
 
