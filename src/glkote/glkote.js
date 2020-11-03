@@ -2743,10 +2743,10 @@ TabMode = {
     var words = [];
     jQuery('.Style_normal, .Style_input').each(function() {
         let text = jQuery(this).text();
-        let matches = text.match(/(^|[\s\"\':])([a-z_0-9\$\#\@\*\%]{2,})(?=$|[\s\"\'\,\.:])/ig);
+        let matches = text.match(/(^|[\s\"\':\(\)\[\]])([a-z_0-9\$\#\@\*\%]{2,})(?=$|[\s\"\'\,\.:\[\]\(\)])/ig);
         for (var i in matches) {
             let word = matches[i].trim();
-            word = word.replace(/[\"\'\.:]/g, '');
+            word = word.replace(/[\[\]\(\)\"\'\.:]/g, '');
             words.push(word);
         }
     });
@@ -2977,6 +2977,7 @@ function evhan_input_keydown(ev) {
         for (var i in win.history) {
           if (win.history[i].toLowerCase().startsWith(HistoryPrefixMode.prefix.toLowerCase()) != false) {
             HistoryPrefixMode.options.push(win.history[i]);
+            HistoryPrefixMode.options.reverse();
           }
         }
         
