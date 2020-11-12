@@ -2063,7 +2063,7 @@ function submit_line_input(win, val, termkey) {
 
   /* Store this input in the command history for this window, unless
      the input is blank or a duplicate. */
-  if (val && val != historylast) {
+  if (val && val != historylast && TabMode.indexOfCaseInsensitive(win.history, val) == -1) {
     win.history.push(val);
     if (win.history.length > 500) {
       /* Don't keep more than twenty entries. */
@@ -2739,6 +2739,14 @@ TabMode = {
   suggestions: [],
   suggestionId: -1,
   
+  indexOfCaseInsensitive: function(ar, val) {
+    let ar2 = [];
+    for (let i in ar) {
+      ar2.push(ar[i].toLowerCase());
+    }
+    return ar2.indexOf(val.toLowerCase());
+  },
+  
   getWords: function() {
     var words = [];
     jQuery('.Style_normal, .Style_input, .Style_subheader').each(function() {
@@ -2838,7 +2846,7 @@ TabMode = {
     const tabModePrefix = TabMode.tabModePrefix.toLowerCase();
   
     for (var i in words) {
-      if (words[i].toLowerCase().startsWith(tabModePrefix) && TabMode.suggestions.indexOf(words[i]) == -1) {
+      if (words[i].toLowerCase().startsWith(tabModePrefix) && TabMode.indexOfCaseInsensitive(TabMode.suggestions, words[i]) == -1) {
         TabMode.suggestions.push(words[i]);
       }
     }
@@ -2975,7 +2983,7 @@ function evhan_input_keydown(ev) {
         HistoryPrefixMode.options = [];
         HistoryPrefixMode.prefix = this.value.trim();
         for (var i in win.history) {
-          if (win.history[i].toLowerCase().startsWith(HistoryPrefixMode.prefix.toLowerCase()) != false) {
+          if (win.history[i].toLowerCase().startsWith(HistoryPrefixMode.prefix.toLowerCase()) != false && TabMode.indexOfCaseInsensitive(HistoryPrefixMode.options, win.history[i]) == -1) {
             HistoryPrefixMode.options.push(win.history[i]);
             HistoryPrefixMode.options.reverse();
           }
