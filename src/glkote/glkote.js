@@ -2065,7 +2065,7 @@ function submit_line_input(win, val, termkey) {
      the input is blank or a duplicate. */
   if (val && val != historylast) {
     win.history.push(val);
-    if (win.history.length > 20) {
+    if (win.history.length > 500) {
       /* Don't keep more than twenty entries. */
       win.history.shift();
     }
