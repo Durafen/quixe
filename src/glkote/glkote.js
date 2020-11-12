@@ -2751,7 +2751,7 @@ TabMode = {
     var words = [];
     jQuery('.Style_normal, .Style_input, .Style_subheader').each(function() {
         let text = jQuery(this).text();
-        let matches = text.match(/(^|[\s\"\':\(\)\[\]])([a-z_0-9\$\#\@\*\%]{2,})(?=$|[\s\"\'\,\.:\[\]\(\)])/ig);
+        let matches = text.match(/(^|[\s\"\':\(\)\[\]])([a-z_0-9\$\#\@\*\%\-]{2,})(?=$|[\s\"\'\,\.:\[\]\(\)])/ig);
         for (var i in matches) {
             let word = matches[i].trim();
             word = word.replace(/[\[\]\(\)\"\'\.:]/g, '');
