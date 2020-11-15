@@ -2063,7 +2063,11 @@ function submit_line_input(win, val, termkey) {
 
   /* Store this input in the command history for this window, unless
      the input is blank or a duplicate. */
-  if (val && val != historylast && TabMode.indexOfCaseInsensitive(win.history, val) == -1) {
+  if (val && val != historylast) {
+    let p = TabMode.indexOfCaseInsensitive(win.history, val);
+    if (p > -1) {
+      win.history = win.history.slice(0, p).concat(win.history.slice(p + 1));
+    }
     win.history.push(val);
     if (win.history.length > 500) {
       /* Don't keep more than twenty entries. */
@@ -2967,61 +2971,43 @@ function evhan_input_keydown(ev) {
       return true;
     
     TabMode.reset(false);
-    if (ev.shiftKey && this.value != '') {
-      if (HistoryPrefixMode.enabled && HistoryPrefixMode.options.length > 0) {
-        if (keycode == key_codes.KEY_UP) {
-          HistoryPrefixMode.historyPos--;
-          if (HistoryPrefixMode.historyPos < 0) {
-            HistoryPrefixMode.historyPos = HistoryPrefixMode.options.length - 1;
-          }
-        } else {
-          HistoryPrefixMode.historyPos++;
-          if (HistoryPrefixMode.historyPos > HistoryPrefixMode.options.length - 1) {
-            HistoryPrefixMode.historyPos = 0
-          }
+    if (HistoryPrefixMode.enabled && HistoryPrefixMode.options.length > 0) {
+      if (keycode == key_codes.KEY_DOWN) {
+        HistoryPrefixMode.historyPos--;
+        if (HistoryPrefixMode.historyPos < 0) {
+          HistoryPrefixMode.historyPos = HistoryPrefixMode.options.length - 1;
         }
-        
-        this.value = HistoryPrefixMode.options[HistoryPrefixMode.historyPos];
-        return false;
       } else {
-        HistoryPrefixMode.reset();
-        HistoryPrefixMode.enabled = true;
-        HistoryPrefixMode.options = [];
-        HistoryPrefixMode.prefix = this.value.trim();
-        for (var i in win.history) {
-          if (win.history[i].toLowerCase().startsWith(HistoryPrefixMode.prefix.toLowerCase()) != false && TabMode.indexOfCaseInsensitive(HistoryPrefixMode.options, win.history[i]) == -1) {
-            HistoryPrefixMode.options.push(win.history[i]);
-            HistoryPrefixMode.options.reverse();
-          }
+        HistoryPrefixMode.historyPos++;
+        if (HistoryPrefixMode.historyPos > HistoryPrefixMode.options.length - 1) {
+          HistoryPrefixMode.historyPos = 0
         }
-        
-        if (HistoryPrefixMode.options.length > 0) {
-          HistoryPrefixMode.historyPos = 0;
-          this.value = HistoryPrefixMode.options[0];
-        }
-        return false;
       }
+      
+      this.value = HistoryPrefixMode.options[HistoryPrefixMode.historyPos];
+      return false;
+    } else {
+      HistoryPrefixMode.reset();
+      HistoryPrefixMode.enabled = true;
+      HistoryPrefixMode.options = [];
+      HistoryPrefixMode.prefix = this.value.trim();
+      
+      win.history.reverse();
+      for (var i in win.history) {
+        if (win.history[i].toLowerCase().startsWith(HistoryPrefixMode.prefix.toLowerCase()) !== false) {
+          HistoryPrefixMode.options.push(win.history[i]);
+        }
+      }
+      
+      win.history.reverse();
+      
+      if (HistoryPrefixMode.options.length > 0) {
+        HistoryPrefixMode.historyPos = 0;
+        this.value = HistoryPrefixMode.options[0];
+      }
+      return false;
     }
     
-    if (keycode == key_codes.KEY_UP && win.historypos > 0) {
-      HistoryPrefixMode.reset();
-      win.historypos -= 1;
-      if (win.historypos < win.history.length)
-        this.value = win.history[win.historypos];
-      else
-        this.value = '';
-    }
-
-    if (keycode == key_codes.KEY_DOWN && win.historypos < win.history.length) {
-      HistoryPrefixMode.reset();
-      win.historypos += 1;
-      if (win.historypos < win.history.length)
-        this.value = win.history[win.historypos];
-      else
-        this.value = '';
-    }
-
-    return false;
   }
   else if (terminator_key_values[keycode]) {
     var winid = $(this).data('winid');
