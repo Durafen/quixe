@@ -2,8 +2,9 @@ Quixe -- a Glulx VM interpreter written in Javascript
 
 *** Fork Notes ***
 Added:
-- auto competition with tab and shift tab.
-- History search with shift up and shift down.
+- word auto competition with tab and shift tab.
+- History search with up and down arrows.
+- History queue incresead to 500 lines.
 
 
 
