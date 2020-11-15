@@ -2875,6 +2875,12 @@ function evhan_input_keydown(ev) {
   if (ev) keycode = ev.keyCode; //### ev.which?
   if (!keycode) return true;
   
+  if (keycode == key_codes.KEY_BACKSPACE && this.value.length <= 1) {
+    var winid = $(this).data('winid');
+    var win = windowdic[winid];
+    win.historypos = win.history.length;
+  }
+  
   if (keycode == key_codes.KEY_TAB && ev.shiftKey) {
     var winid = $(this).data('winid');
     var win = windowdic[winid];
