@@ -2758,7 +2758,7 @@ TabMode = {
         let matches = text.match(/(^|[\s\"\':;\(\)\[\]])([a-z_0-9\$\#\@\*\%\-\?\!]{2,})(?=$|[\s\"\'\,\.:;\[\]\(\)])/ig);
         for (var i in matches) {
             let word = matches[i].trim();
-            word = word.replace(/[\[\]\(\)\"\'\.:;\?\!]/g, '');
+            word = word.replace(/[\[\]\(\)\"\'\.:;\?\!,]/g, '');
             words.push(word);
         }
     });
@@ -2900,7 +2900,11 @@ function evhan_input_keydown(ev) {
         valTrimmed = val.substring(0, lastSpace + 1);
       }
 
-      const nextSuggestion = TabMode.getPrevSuggestion();
+      let nextSuggestion = TabMode.getPrevSuggestion();
+      if (this.value == nextSuggestion) {
+        nextSuggestion = TabMode.getPrevSuggestion();
+      }
+      
       if (nextSuggestion != '') {
         this.value = valTrimmed + nextSuggestion;
       }
@@ -2920,7 +2924,11 @@ function evhan_input_keydown(ev) {
         TabMode.enable(lastWord);
       }
 
-      const nextSuggestion = TabMode.getPrevSuggestion();
+      let nextSuggestion = TabMode.getPrevSuggestion();
+      if (this.value == nextSuggestion) {
+        nextSuggestion = TabMode.getPrevSuggestion();
+      }
+      
       if (nextSuggestion != '') {
         this.value = valTrimmed + nextSuggestion;
       }
@@ -2937,7 +2945,12 @@ function evhan_input_keydown(ev) {
             valTrimmed = val.substring(0, lastSpace + 1);
         }
 
-        const nextSuggestion = TabMode.getNextSuggestion();
+        let nextSuggestion = TabMode.getNextSuggestion();
+      
+        if (nextSuggestion == this.value) {
+          nextSuggestion = TabMode.getNextSuggestion();
+        }
+      
         if (nextSuggestion != '') {
             this.value = valTrimmed + nextSuggestion;
         }
@@ -2957,7 +2970,12 @@ function evhan_input_keydown(ev) {
             TabMode.enable(lastWord);
         }
 
-        const nextSuggestion = TabMode.getNextSuggestion();
+        let nextSuggestion = TabMode.getNextSuggestion();
+      
+        if (nextSuggestion == this.value) {
+          nextSuggestion = TabMode.getNextSuggestion();
+        }
+        
         if (nextSuggestion != '') {
             this.value = valTrimmed + nextSuggestion;
         }
@@ -2974,11 +2992,17 @@ function evhan_input_keydown(ev) {
     if (HistoryPrefixMode.enabled && HistoryPrefixMode.options.length > 0) {
       if (keycode == key_codes.KEY_DOWN) {
         HistoryPrefixMode.historyPos--;
+        if (this.value == HistoryPrefixMode.options[HistoryPrefixMode.historyPos]) {
+          HistoryPrefixMode.historyPos--;
+        }
         if (HistoryPrefixMode.historyPos < 0) {
           HistoryPrefixMode.historyPos = HistoryPrefixMode.options.length - 1;
         }
       } else {
         HistoryPrefixMode.historyPos++;
+        if (this.value == HistoryPrefixMode.options[HistoryPrefixMode.historyPos]) {
+          HistoryPrefixMode.historyPos++;
+        }
         if (HistoryPrefixMode.historyPos > HistoryPrefixMode.options.length - 1) {
           HistoryPrefixMode.historyPos = 0
         }
@@ -2995,7 +3019,7 @@ function evhan_input_keydown(ev) {
       win.history.reverse();
       for (var i in win.history) {
         if (win.history[i].toLowerCase().startsWith(HistoryPrefixMode.prefix.toLowerCase()) !== false) {
-          HistoryPrefixMode.options.push(win.history[i]);
+          HistoryPrefixMode.options.push(win.history[i].replace(/[,]/g, ''));
         }
       }
       
@@ -3003,7 +3027,11 @@ function evhan_input_keydown(ev) {
       
       if (HistoryPrefixMode.options.length > 0) {
         HistoryPrefixMode.historyPos = 0;
-        this.value = HistoryPrefixMode.options[0];
+        if (this.value == HistoryPrefixMode.options[0] && HistoryPrefixMode.options.length > 2) {
+          HistoryPrefixMode.historyPos++;
+        }
+        
+        this.value = HistoryPrefixMode.options[HistoryPrefixMode.historyPos];
       }
       return false;
     }
