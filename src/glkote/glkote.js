@@ -3035,7 +3035,7 @@ function evhan_input_keydown(ev) {
       win.history.reverse();
       for (var i in win.history) {
         if (win.history[i].toLowerCase().startsWith(HistoryPrefixMode.prefix.toLowerCase()) !== false) {
-          HistoryPrefixMode.options.push(win.history[i].replace(/[,]/g, ''));
+          HistoryPrefixMode.options.push(win.history[i]);
         }
       }
       
