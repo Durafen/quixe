@@ -2885,6 +2885,13 @@ HistoryPrefixMode = {
     HistoryPrefixMode.options = [];
   }
 };
+  
+AutoCompletes = [
+  {
+    "keys": ["x"],
+    "completeTo": "examine"
+  }
+];
 
 /* Event handler: keydown events on input fields (line input)
 
@@ -2952,6 +2959,35 @@ function evhan_input_keydown(ev) {
       
     return false;
   } else if (keycode == key_codes.KEY_TAB) {
+    // Try AutoCompletes first
+    const tryAutoCompletes = true;
+    
+    if (tryAutoCompletes) {
+      const val = this.value.trim();
+      const lastSpace = val.lastIndexOf(" ");
+      var valTrimmed = '';
+
+      if (lastSpace != -1) {
+        valTrimmed = val.substring(lastSpace + 1);
+      } else {
+        valTrimmed = val;
+      }
+      
+      for (let i in AutoCompletes) {
+        for (let ik in AutoCompletes[i].keys) {
+          if (AutoCompletes[i].keys[ik] === valTrimmed) {
+            if (lastSpace != -1) {
+              this.value = this.value.substring(0, lastSpace + 1) + AutoCompletes[i].completeTo;
+              return false;
+            } else {
+              this.value = AutoCompletes[i].completeTo;
+              return false;
+            }
+          }
+        }
+      }
+    }
+    
     if (TabMode.enabled) {
         const val = this.value.trim();
         const lastSpace = val.lastIndexOf(" ");
