@@ -2889,7 +2889,7 @@ HistoryPrefixMode = {
 AutoCompletes = [
   {
     "keys": ["x"],
-    "completeTo": "examine"
+    "completeTo": "examine "
   }
 ];
 
