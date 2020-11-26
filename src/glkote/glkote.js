@@ -2837,7 +2837,7 @@ TabMode = {
       TabMode.suggestionId = 0;
     }
     
-    return suggestion;
+    return suggestion.replace(/[,\.]$/g, '');
   },
   
   getPrevSuggestion: function () {
@@ -2857,7 +2857,7 @@ TabMode = {
     
     let suggestion = TabMode.suggestions[TabMode.suggestionId];
     
-    return suggestion;
+    return suggestion.replace(/[,\.]$/g, '');
   },
   
   buildSuggestions: function () {
