@@ -2924,12 +2924,12 @@ function evhan_input_keydown(ev) {
       }
 
       let nextSuggestion = TabMode.getPrevSuggestion();
-      if (this.value == nextSuggestion) {
+      if (this.value.trim() == nextSuggestion.trim()) {
         nextSuggestion = TabMode.getPrevSuggestion();
       }
       
       if (nextSuggestion != '') {
-        this.value = valTrimmed + nextSuggestion;
+        this.value = valTrimmed + nextSuggestion + ' ';
       }
           
     } else {
@@ -2948,12 +2948,12 @@ function evhan_input_keydown(ev) {
       }
 
       let nextSuggestion = TabMode.getPrevSuggestion();
-      if (this.value == nextSuggestion) {
+      if (this.value.trim() == nextSuggestion.trim()) {
         nextSuggestion = TabMode.getPrevSuggestion();
       }
       
       if (nextSuggestion != '') {
-        this.value = valTrimmed + nextSuggestion;
+        this.value = valTrimmed + nextSuggestion + ' ';
       }
     }
       
@@ -2999,12 +2999,12 @@ function evhan_input_keydown(ev) {
 
         let nextSuggestion = TabMode.getNextSuggestion();
       
-        if (nextSuggestion == this.value) {
+        if (nextSuggestion.trim() == this.value.trim()) {
           nextSuggestion = TabMode.getNextSuggestion();
         }
       
         if (nextSuggestion != '') {
-            this.value = valTrimmed + nextSuggestion;
+            this.value = valTrimmed + nextSuggestion + ' ';
         }
         
     } else {
@@ -3024,12 +3024,12 @@ function evhan_input_keydown(ev) {
 
         let nextSuggestion = TabMode.getNextSuggestion();
       
-        if (nextSuggestion == this.value) {
+        if (nextSuggestion.trim() == this.value.trim()) {
           nextSuggestion = TabMode.getNextSuggestion();
         }
         
         if (nextSuggestion != '') {
-            this.value = valTrimmed + nextSuggestion;
+            this.value = valTrimmed + nextSuggestion + ' ';
         }
     }
     
