@@ -2924,7 +2924,7 @@ function evhan_input_keydown(ev) {
       }
 
       let nextSuggestion = TabMode.getPrevSuggestion();
-      if (this.value.trim() == nextSuggestion.trim()) {
+      if (this.value.trim().toLowerCase() === nextSuggestion.trim().toLowerCase()) {
         nextSuggestion = TabMode.getPrevSuggestion();
       }
       
@@ -2948,7 +2948,7 @@ function evhan_input_keydown(ev) {
       }
 
       let nextSuggestion = TabMode.getPrevSuggestion();
-      if (this.value.trim() == nextSuggestion.trim()) {
+      if (this.value.trim().toLowerCase() === nextSuggestion.trim().toLowerCase()) {
         nextSuggestion = TabMode.getPrevSuggestion();
       }
       
@@ -2999,7 +2999,7 @@ function evhan_input_keydown(ev) {
 
         let nextSuggestion = TabMode.getNextSuggestion();
       
-        if (nextSuggestion.trim() == this.value.trim()) {
+        if (nextSuggestion.trim().toLowerCase() === this.value.trim().toLowerCase()) {
           nextSuggestion = TabMode.getNextSuggestion();
         }
       
@@ -3024,7 +3024,7 @@ function evhan_input_keydown(ev) {
 
         let nextSuggestion = TabMode.getNextSuggestion();
       
-        if (nextSuggestion.trim() == this.value.trim()) {
+        if (nextSuggestion.trim().toLowerCase() === this.value.trim().toLowerCase()) {
           nextSuggestion = TabMode.getNextSuggestion();
         }
         
