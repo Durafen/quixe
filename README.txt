@@ -7,7 +7,6 @@ Added:
 - History queue incresead to 500 lines.
 
 
-
 Quixe Library: version 2.1.8.
 Designed by Andrew Plotkin <erkyrath@eblong.com>.
 (Storage and heap-management code contributed by Iain Merrick.)
