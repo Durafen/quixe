@@ -2767,7 +2767,7 @@ function evhan_input_char_keypress(ev) {
   return false;
 }
 
-TabMode = {
+var TabMode = {
   enabled: false,
   tabModePrefix: '',
   matchedWords: [],
@@ -2888,7 +2888,7 @@ TabMode = {
   }
 };
 
-HistoryPrefixMode = {
+var HistoryPrefixMode = {
   enabled: false,
   prefix: "",
   historyPos: -1,
@@ -2901,7 +2901,7 @@ HistoryPrefixMode = {
   }
 };
   
-AutoCompletes = [
+var AutoCompletes = [
   {
     "keys": ["x"],
     "completeTo": "examine "
