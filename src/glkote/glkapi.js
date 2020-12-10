@@ -1,5 +1,3 @@
-'use strict';
-
 /* GlkAPI -- a Javascript Glk API for IF interfaces
  * GlkOte Library: version 2.2.5.
  * Glk API which this implements: version 0.7.4.
@@ -6314,7 +6312,7 @@ function glk_date_to_simple_time_local(dateref, factor) {
 /* End of Glk namespace function. Return the object which will
    become the Glk global. */
 return {
-    version: '2.2.6', /* GlkOte/GlkApi version */
+    version: '2.2.5', /* GlkOte/GlkApi version */
     init : init,
     update : update,
     save_allstate : save_allstate,

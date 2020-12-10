@@ -1,5 +1,3 @@
-'use strict';
-
 /* GiLoad -- a game-file loader for Quixe
  * Designed by Andrew Plotkin <erkyrath@eblong.com>
  * <http://eblong.com/zarf/glulx/quixe/>
@@ -449,13 +447,22 @@ function get_query_params() {
     return map;
 }
 
-/* Turn a relative URL absolute, based on document.location.
-   (This doesn't make sense in a headless Node environment,
-   but this function shouldn't be called in such environments.)
+/* I learned this terrible trick for turning a relative URL absolute. 
+   It's supposed to work on all browsers, if you don't go mad.
+   (This uses DOM methods rather than jQuery.)
 */
 function absolutize(url) {
-    var res = new URL(url, document.location.href);
-    return res.href;
+    /* I don't know if this is slow (or safe) for data URLs. Might as
+       well skip out of the easy cases first, anyhow. */
+    if (url.match(/^(file|data|http|https):/i)) {
+        return url;
+    }
+
+    var div = document.createElement('div');
+    div.innerHTML = '<a></a>';
+    div.firstChild.href = url;
+    div.innerHTML = div.innerHTML;
+    return div.firstChild.href;
 }
 
 /* Return a metadata field, or undefined if there is no such field
