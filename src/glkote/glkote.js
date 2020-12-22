@@ -317,6 +317,8 @@ function glkote_init(iface) {
   else if (window.DialogClass) {
     Dialog = new window.DialogClass();
     /* Will have to init. */
+  } else if (window.Dialog) {
+    Dialog = window.Dialog;
   }
 
   /* From here, every path must call finish_init(). But it might happen async (after a delay). */
