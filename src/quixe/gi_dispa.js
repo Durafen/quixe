@@ -21,7 +21,7 @@
 //### Should split WriteWord into a WriteRefWord and WriteArrayWord,
 //### with different handling of -1. Etc.
 
-/* Put everything inside the GiDispa namespace.
+/* All state is contained in GiDispaClass.
 
    Within this namespace, "self" is an internal secondary namespace. Many
    of our private variables and functions will be copied into "self".
@@ -35,7 +35,7 @@
    that often in (normal) gameplay.
 */
 
-var GiDispa = function() {
+var GiDispaClass = function() {
 
 /* Create the "self" object. */
 var self = {};
@@ -45,14 +45,30 @@ var self = {};
    with Quixe, VM is just an alias for the Quixe interface object.
 */
 self.VM = null;
-
+self.Glk = null;
+    
 /* Set the VM interface object. This is called by the Glk library, before
    the VM starts running. 
 */
-function set_vm(vm_api) {
-    self.VM = vm_api;
+function gidispa_init(options) {
+    self.VM = options.vm;
+    self.Glk = options.io;
 }
 
+/* Has this module been inited? */
+function gidispa_inited() {
+    return (self.VM != null);
+}
+
+function gidispa_getlibrary(val) {
+    switch (val) {
+        case 'VM': return self.VM;
+        case 'Glk': return self.Glk;
+    }
+    /* Unrecognized library name. */
+    return null;
+}
+    
 /* A table of the Glk classes, and their index numbers. This is derived from
    gi_dispa.c, although it's too simple to bother auto-generating.
 */
@@ -556,7 +572,7 @@ function build_function(func) {
     out.push('var self = this;');
 
     /* If this is true, the call might return DidNotReturn. */
-    mayblock = Glk.call_may_not_return(func.id);
+    mayblock = self.Glk.call_may_not_return(func.id);
 
     /* Load the argument values into local variables, for use in the
        call. For array, struct, and reference arguments, we also need
@@ -587,13 +603,13 @@ function build_function(func) {
             if ((refarg instanceof ArgInt)
                 || (refarg instanceof ArgChar)
                 || (refarg instanceof ArgClass)) {
-                out.push('  '+tmpvar+' = new Glk.RefBox();');
+                out.push('  '+tmpvar+' = new self.Glk.RefBox();');
                 val = convert_arg(refarg, arg.passin, 'self.VM.ReadWord(callargs['+argpos+'])');
                 out.push('  '+tmpvar+'.set_value('+val+');');
             }
             else if (refarg instanceof ArgStruct) {
                 subargs = refarg.form.args;
-                out.push('  '+tmpvar+' = new Glk.RefStruct('+subargs.length+');');
+                out.push('  '+tmpvar+' = new self.Glk.RefStruct('+subargs.length+');');
                 for (jx=0; jx<subargs.length; jx++) {
                     val = convert_arg(subargs[jx], arg.passin, 'self.VM.ReadStructField(callargs['+argpos+'], '+jx+')');
                     out.push('  '+tmpvar+'.push_field('+val+');');
@@ -653,7 +669,7 @@ function build_function(func) {
             out.push('  if (ix == 0) break;');
             out.push('  '+tmpvar+'.push(ix);');
             out.push('}');
-            out.push(tmpvar+' = Glk.'+confunc+'('+tmpvar+');');
+            out.push(tmpvar+' = self.Glk.'+confunc+'('+tmpvar+');');
             argpos += 1;
         }
         else {
@@ -672,12 +688,12 @@ function build_function(func) {
     else {
         retval = '';
     }
-    out.push(retval + 'Glk.glk_' + func.name + '(' + argjoin.join(', ') + ');');
+    out.push(retval + 'self.Glk.glk_' + func.name + '(' + argjoin.join(', ') + ');');
 
     if (mayblock) {
         /* If the call blocks, we need to stash away the arguments and
            then return early. */
-        out.push('if (glkret === Glk.DidNotReturn) {');
+        out.push('if (glkret === self.Glk.DidNotReturn) {');
         out.push('  self.set_blocked_selector(' + func.id + ', callargs);');
         out.push('  return glkret;');
         out.push('}');
@@ -1059,7 +1075,11 @@ init_module();
 /* End of GiDispa namespace function. Return the object which will
    become the GiDispa global. */
 return {
-    set_vm: set_vm,
+    classname: 'GiDispa',
+    init: gidispa_init,
+    inited: gidispa_inited,
+    getlibrary: gidispa_getlibrary,
+    
     get_function: get_function,
     prepare_resume: prepare_resume,
     check_autosave: check_autosave,
@@ -1072,9 +1092,16 @@ return {
     get_retained_array: get_retained_array
 };
 
-}();
+};
+
+/* I'm breaking the rule about creating a predefined instance. This is
+   only used by Quixe via GiLoad, which always creates a new instance.
+   I don't know of any other projects which need the backwards
+   compatibility support.
+*/
+// var GiDispa = new GiDispaClass();
 
 // Node-compatible behavior
-try { exports.GiDispa = GiDispa; } catch (ex) {};
+try { exports.GiDispaClass = GiDispaClass; } catch (ex) {};
 
 /* End of GiDispa library. */

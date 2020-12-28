@@ -118,8 +118,9 @@
  *   undefined.
  */
 
-/* Put everything inside the GiLoad namespace. */
-var GiLoad = function() {
+/* All state is contained in GiLoadClass. */
+
+var GiLoadClass = function() {
 
 /* Start with the defaults. These can be modified later by the game_options
    defined in the HTML file.
@@ -148,6 +149,9 @@ var coverimageres = undefined; /* Image resource number of the cover art */
 var debug_info = null; /* gameinfo.dbg file -- loaded from Blorb */
 var blorbchunks = {}; /* Indexed by "USE:NUMBER" -- loaded from Blorb */
 var alttexts = {}; /* Indexed by "USE:NUMBER" -- loaded from Blorb */
+var started = false; /* True once start_game() runs */
+    
+var GlkOte = null; /* imported API object -- for GlkOte.log */
 
 /* Begin the loading process. This is what you call to start a game;
    it takes care of starting the Glk and Quixe modules, when the game
@@ -178,10 +182,20 @@ function load_run(optobj, image, imageoptions) {
 
     /* Set the default entries for the interface objects that come from
        other libraries. (If no such libraries have been loaded, then
-       these do nothing, but game_options can still supply these entries.)
+       these do nothing. The game_options passed in can override each of
+       these references!)
     */
     all_options.io = window.Glk;
     all_options.vm = window.Quixe;
+    all_options.GiLoad = this;
+    all_options.GlkOte = new window.GlkOteClass();
+    all_options.GiDispa = null;
+    if (window.GiDispaClass) {
+        // We only create this default if the class is available.
+        all_options.GiDispa = new window.GiDispaClass();
+    }
+    
+    GlkOte = all_options.GlkOte; /* our copy of the reference */
 
     /* The game_options object could be provided via an argument. If not,
        we use the global game_options. */
@@ -201,7 +215,7 @@ function load_run(optobj, image, imageoptions) {
        set above. */
     if (optobj)
         jQuery.extend(all_options, optobj);
-
+    
     /* If the image_info_map is a string, look for a global object of
        that name. If there isn't one, delete that option. (The 
        image_info_map could also be an object already, in which case
@@ -998,17 +1012,40 @@ function start_game(image) {
     }
 
     /* Pass the game image file along to the VM engine. */
-    all_options.vm.prepare(image, all_options);
+    all_options.vm.init(image, all_options);
 
+    started = true;
+    
     /* Now fire up the display library. This will take care of starting
        the VM engine, once the window is properly set up. */
     all_options.io.init(all_options);
 }
 
+/* Has load_run() been called (successfully)? Success means we made it
+   all the way through start_game(). */
+function is_inited() {
+    return started;
+}
+
+function get_library(val) {
+    switch (val) {
+        case 'GlkOte': return GlkOte;
+        case 'GiDispa': return all_options.GiDispa;
+        case 'VM': return all_options.vm; // typically Quixe
+        case 'IO': return all_options.io; // normally Glk
+    }
+    /* Unrecognized library name. */
+    return null;
+}
+    
 /* End of GiLoad namespace function. Return the object which will
    become the GiLoad global. */
 return {
+    classname: 'GiLoad',
     load_run: load_run,
+    inited: is_inited,
+    getlibrary: get_library,
+    
     find_data_chunk: find_data_chunk,
     get_metadata: get_metadata,
     get_cover_pict: get_cover_pict,
@@ -1017,9 +1054,14 @@ return {
     get_image_url: get_image_url
 };
 
-}();
+};
+
+/* GiLoad is an instance of GiLoadClass, ready to init.
+   (The BASESIXTYFOURTOP in I7's Quixe template relies on GiLoad
+   existing in the global environment.) */
+var GiLoad = new GiLoadClass();
 
 // Node-compatible behavior
-try { exports.GiLoad = GiLoad; } catch (ex) {};
+try { exports.GiLoad = GiLoad; exports.GiLoadClass = GiLoadClass; } catch (ex) {};
 
 /* End of GiLoad library. */

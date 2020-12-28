@@ -69,15 +69,20 @@
 //   (check isFinite and non-negative)
 // Should we be caching arrays instead of strings?
 
-/* Put everything inside the Quixe namespace. */
+/* All state is contained in QuixeClass. */
 
-var Quixe = function() {
+var QuixeClass = function() {
 
 /* Create the "self" object. (No relation to the Inform "self" global.) */
 var self = {};
 
 /* This is called by the page (or the page's loader library) when it
-   starts up. It must be called before quixe_init().
+   starts up. It must be called before quixe_start().
+
+   (NOTE: In older versions of this code, quixe_init() was called
+   quixe_prepare(), and quixe_start() was called quixe_init(). This was
+   confusing and inconsistent with the rest of the ecosystem. I renamed
+   them as of 2.2.0.)
 
    The first argument is the game file image, encoded as an array of byte
    values (integers between 0 and 255). It is stashed away for when
@@ -89,7 +94,11 @@ var self = {};
    unique to the game. (In fact it is just the first 64 bytes of the
    game file, encoded as hexadecimal digits.)
 */
-function quixe_prepare(image, all_options) {
+function quixe_init(image, all_options) {
+    self.GiDispa = all_options.GiDispa;
+    self.GiLoad = all_options.GiLoad;
+    self.Glk = all_options.io;
+    
     game_image = image;
 
     var ls = game_image.slice(0, 64);
@@ -114,15 +123,28 @@ function quixe_prepare(image, all_options) {
     }
 }
 
+function quixe_inited() {
+    return (game_image != null);
+}
+
+function quixe_getlibrary(val) {
+    switch (val) {
+        case 'GiDispa': return self.GiDispa;
+        case 'GiLoad': return self.GiLoad;
+        case 'Glk': return self.Glk;
+        case 'GlkOte': return self.Glk.getlibrary('GlkOte');
+        case 'Dialog': return self.Glk.getlibrary('Dialog');
+    }
+    /* Unrecognized library name. */
+    return null;
+}
+    
 /* This is called by the page (or the page's display library) when it
    starts up. It executes until the first glk_select() or glk_exit().
-
-   (It's inelegant to call this "init" when the "prepare" function must
-   be called first. Sorry about that.)
 */
-function quixe_init() {
+function quixe_start() {
     if (self.vm_started) {
-        Glk.fatal_error("Quixe was inited twice!");
+        self.Glk.fatal_error("Quixe was inited twice!");
         return;
     }
 
@@ -137,7 +159,7 @@ function quixe_init() {
         if (ex.stack)
             qlog('JS stack dump A:\n' + ex.stack);
         qstackdump();
-        Glk.fatal_error("Quixe init: " + show_exception(ex));
+        self.Glk.fatal_error("Quixe init: " + show_exception(ex));
         if (true || opt_rethrow_exceptions)
             throw ex;
     }
@@ -162,7 +184,7 @@ function quixe_resume(argument) {
         if (ex.stack)
             qlog('JS stack dump B:\n' + ex.stack);
         qstackdump();
-        Glk.fatal_error("Quixe run: " + show_exception(ex));
+        self.Glk.fatal_error("Quixe run: " + show_exception(ex));
         if (opt_rethrow_exceptions)
             throw ex;
     }
@@ -504,7 +526,7 @@ function QuoteEscapeString(val) {
 
 /* All fatal errors in the interpreter call this. It just converts the
    arguments to a nicely-formatted string, and then throws the string
-   as an exception. The top-level quixe_init() or quixe_resume() will
+   as an exception. The top-level quixe_start() or quixe_resume() will
    catch the exception and display it.
 */
 function fatal_error(msg) {
@@ -1212,7 +1234,7 @@ function oputil_flush_string(context) {
     var str = context.buffer.join("");
     context.buffer.length = 0;
 
-    context.code.push("Glk.glk_put_jstring("+QuoteEscapeString(str)+");");
+    context.code.push("self.Glk.glk_put_jstring("+QuoteEscapeString(str)+");");
 }
 
 /* Return the signed equivalent of a value. If it is a high-bit constant, 
@@ -2208,10 +2230,10 @@ var opcode_table = {
         case 2: /* glk */
             if (quot_isconstant(operands[0])) {
                 var val = Number(operands[0]) & 0xff;
-                context.code.push("Glk.glk_put_char("+val+");");
+                context.code.push("self.Glk.glk_put_char("+val+");");
             }
             else {
-                context.code.push("Glk.glk_put_char(("+operands[0]+")&0xff);");
+                context.code.push("self.Glk.glk_put_char(("+operands[0]+")&0xff);");
             }
             break;
         case 1: /* filter */
@@ -2234,10 +2256,10 @@ var opcode_table = {
             var sign0 = oputil_signify_operand(context, operands[0]);
             if (quot_isconstant(operands[0])) {
                 var val = Number(sign0).toString(10);
-                context.code.push("Glk.glk_put_jstring("+QuoteEscapeString(val)+", true);");
+                context.code.push("self.Glk.glk_put_jstring("+QuoteEscapeString(val)+", true);");
             }
             else {
-                context.code.push("Glk.glk_put_jstring(("+sign0+").toString(10), true);");
+                context.code.push("self.Glk.glk_put_jstring(("+sign0+").toString(10), true);");
             }
             break;
         case 1: /* filter */
@@ -2269,10 +2291,10 @@ var opcode_table = {
         case 2: /* glk */
             if (quot_isconstant(operands[0])) {
                 var val = Number(operands[0]);
-                context.code.push("Glk.glk_put_char_uni("+val+");");
+                context.code.push("self.Glk.glk_put_char_uni("+val+");");
             }
             else {
-                context.code.push("Glk.glk_put_char_uni("+operands[0]+");");
+                context.code.push("self.Glk.glk_put_char_uni("+operands[0]+");");
             }
             break;
         case 1: /* filter */
@@ -2600,7 +2622,7 @@ var opcode_table = {
     0x130: function(context, operands) { /* glk */
         var mayblock;
         if (quot_isconstant(operands[0]))
-            mayblock = Glk.call_may_not_return(Number(operands[0]));
+            mayblock = self.Glk.call_may_not_return(Number(operands[0]));
         else
             mayblock = true;
         if (mayblock) {
@@ -2632,9 +2654,9 @@ var opcode_table = {
            we just unloaded the offstack. The non-blocking case is a normal
            store. */
         context.varsused["glkret"] = true;
-        context.code.push("glkret = GiDispa.get_function("+operands[0]+")(self.tempglkargs);");
+        context.code.push("glkret = self.GiDispa.get_function("+operands[0]+")(self.tempglkargs);");
         if (mayblock) {
-            context.code.push("if (glkret === Glk.DidNotReturn) {");
+            context.code.push("if (glkret === self.Glk.DidNotReturn) {");
             context.code.push("  self.resumefuncop = "+oputil_record_funcop(operands[2])+";");
             context.code.push("  self.resumevalue = 0;");
             context.code.push("  self.pc = "+context.cp+";");
@@ -3970,7 +3992,7 @@ var accel_func_map = {
 
         /* func_1_z__region(obj) */
         if (accel_func_map[1](argc, argv) != 1) { 
-            Glk.glk_put_jstring("\n[** Programming error: tried to find the \".\" of (something) **]\n");
+            self.Glk.glk_put_jstring("\n[** Programming error: tried to find the \".\" of (something) **]\n");
             return 0;
         }
 
@@ -4051,7 +4073,7 @@ var accel_func_map = {
             return 0;
     
         if (!accel_helper_obj_in_class(cla)) {
-            Glk.glk_put_jstring("\n[** Programming error: tried to apply 'ofclass' with non-class **]\n");
+            self.Glk.glk_put_jstring("\n[** Programming error: tried to apply 'ofclass' with non-class **]\n");
             return 0;
         }
     
@@ -4085,7 +4107,7 @@ var accel_func_map = {
                 return Mem4(accel_params[8] + (4 * id));
             }
 
-            Glk.glk_put_jstring("\n[** Programming error: tried to read (something) **]\n");
+            self.Glk.glk_put_jstring("\n[** Programming error: tried to read (something) **]\n");
             return 0;
         }
 
@@ -4131,7 +4153,7 @@ var accel_func_map = {
 
         /* func_1_z__region(obj) */
         if (accel_func_map[1](argc, argv) != 1) { 
-            Glk.glk_put_jstring("\n[** Programming error: tried to find the \".\" of (something) **]\n");
+            self.Glk.glk_put_jstring("\n[** Programming error: tried to find the \".\" of (something) **]\n");
             return 0;
         }
 
@@ -4213,7 +4235,7 @@ var accel_func_map = {
             return 0;
     
         if (!accel_helper_obj_in_class(cla)) {
-            Glk.glk_put_jstring("\n[** Programming error: tried to apply 'ofclass' with non-class **]\n");
+            self.Glk.glk_put_jstring("\n[** Programming error: tried to apply 'ofclass' with non-class **]\n");
             return 0;
         }
     
@@ -4247,7 +4269,7 @@ var accel_func_map = {
                 return Mem4(accel_params[8] + (4 * id));
             }
 
-            Glk.glk_put_jstring("\n[** Programming error: tried to read (something) **]\n");
+            self.Glk.glk_put_jstring("\n[** Programming error: tried to read (something) **]\n");
             return 0;
         }
 
@@ -4557,7 +4579,7 @@ function stream_num(nextcp, value, inmiddle, charnum) {
     case 2: /* glk */
         if (charnum)
             buf = buf.slice(charnum);
-        Glk.glk_put_jstring(buf, true);
+        self.Glk.glk_put_jstring(buf, true);
         break;
 
     case 1: /* filter */
@@ -4637,7 +4659,7 @@ function stream_string(nextcp, addr, inmiddle, bitnum) {
         //qlog("### strop(" + addrkey + (substring?":[sub]":"") + "): " + strop);
     
         if (!(strop instanceof Function)) {
-            Glk.glk_put_jstring(strop);
+            self.Glk.glk_put_jstring(strop);
             if (!substring)
                 return false;
         }
@@ -5141,7 +5163,7 @@ function do_gestalt(val, val2) {
         return 0x00030102; /* Glulx spec version 3.1.2 */
 
     case 1: /* TerpVersion */
-        return 0x00020108; /* Quixe version 2.1.8 */
+        return 0x00020200; /* Quixe version 2.2.0 */
 
     case 2: /* ResizeMem */
         return 1; /* Memory resizing works. */
@@ -5486,7 +5508,7 @@ self.encode_float = encode_float;
    of them in self, but I was lazy.
 */
 
-/* Parameters set at prepare() time, including the game image and any
+/* Parameters set at init() time, including the game image and any
    execution options. */
 
 var game_image = null; /* the original game image, as an array of bytes */
@@ -5567,6 +5589,8 @@ function setup_vm() {
     if (!game_image)
         fatal_error("There is no Glulx game file loaded.");
 
+    var Dialog = self.Glk.getlibrary('Dialog');
+    
     self.vm_started = true;
     self.resumefuncop = null;
     self.resumevalue = 0;
@@ -5796,7 +5820,7 @@ function vm_save(streamid) {
     if (self.iosysmode != 2)
         fatal_error("Streams are only available in Glk I/O system.");
 
-    var str = GiDispa.class_obj_from_id('stream', streamid);
+    var str = self.GiDispa.class_obj_from_id('stream', streamid);
     if (!str)
         return false;
     
@@ -5837,7 +5861,7 @@ function vm_save(streamid) {
     
     var quetzal = pack_iff_chunks([{ key:"FORM", chunk:payload_bytes }])
     //qlog("vm_save: writing " + quetzal.length + " bytes");    
-    Glk.glk_put_buffer_stream(str, quetzal);
+    self.Glk.glk_put_buffer_stream(str, quetzal);
     return true;
 }
 
@@ -5848,7 +5872,7 @@ function vm_restore(streamid) {
     if (self.iosysmode != 2)
         fatal_error("Streams are only available in Glk I/O system.");
 
-    var str = GiDispa.class_obj_from_id('stream', streamid);
+    var str = self.GiDispa.class_obj_from_id('stream', streamid);
     if (!str)
         return false;
     
@@ -5856,7 +5880,7 @@ function vm_restore(streamid) {
     var buffer = new Array(1024);
     var count = 1;
     while (count > 0) {
-        count = Glk.glk_get_buffer_stream(str, buffer);
+        count = self.Glk.glk_get_buffer_stream(str, buffer);
         quetzal = quetzal.concat(buffer.slice(0, count));
     }
     //qlog("vm_restore: reading " + quetzal.length + " bytes");
@@ -5976,6 +6000,8 @@ function vm_restore(streamid) {
    We're creating a JSONable object.
 */
 function vm_autosave(eventaddr) {
+    var Dialog = self.Glk.getlibrary('Dialog');
+    
     if (eventaddr < 0) {
         /* Delete the autosave. */
         //qlog('### deleting autosave');
@@ -6055,7 +6081,7 @@ function vm_autosave(eventaddr) {
 
     /* Tell the Glk API layer to save its own state and pass it back
        to us. (This includes the glui32-to-Glk-ID table.) */
-    snapshot.glk = Glk.save_allstate();
+    snapshot.glk = self.Glk.save_allstate();
 
     /* Write the snapshot into an appropriate location, which depends
        on the game signature. */
@@ -6153,7 +6179,7 @@ function vm_autorestore(snapshot) {
     }
 
     /* Restore Glk API information. */
-    Glk.restore_allstate(snapshot.glk);
+    self.Glk.restore_allstate(snapshot.glk);
 
     /* Pop the callstub, restoring the PC to the @glk opcode (prevpc). */
     pop_callstub(0);
@@ -6523,7 +6549,9 @@ function quixe_get_debuginfo() {
 }
 
 function parse_inform_debug_data() {
-    var buf = GiLoad.get_debug_info();
+    if (!self.GiLoad)
+        return;
+    var buf = self.GiLoad.get_debug_info();
     if (!buf)
         return;
     var done;
@@ -6691,7 +6719,7 @@ function parse_inform_debug_data() {
 self.VMStopped = { dummy: 'The top-level function has returned.' };
 
 /* Begin executing code, compiling as necessary. When glk_select is invoked,
-   or the game ends, this calls Glk.update() and exits.
+   or the game ends, this calls self.Glk.update() and exits.
 */
 function execute_loop() {
     var vmfunc, pathtab, path;
@@ -6734,10 +6762,10 @@ function execute_loop() {
     if (self.vm_stopped) {
         /* If the library resumes us after exiting, we'll call glk_exit()
            again. That's the library's problem. */
-        Glk.glk_exit();
+        self.Glk.glk_exit();
     }
 
-    Glk.update();
+    self.Glk.update();
 
     if (opt_log_execution_time) {
         qlog("event executed in " + (pathend-pathstart) + " ms");
@@ -6747,9 +6775,13 @@ function execute_loop() {
 /* End of Quixe namespace function. Return the object which will
    become the Quixe global. */
 return {
-    version: '2.1.8', /* Quixe version */
-    prepare: quixe_prepare,
+    classname: 'Quixe',
+    version: '2.2.0', /* Quixe version */
     init: quixe_init,
+    inited: quixe_inited,
+    getlibrary: quixe_getlibrary,
+    
+    start: quixe_start,
     resume: quixe_resume,
     get_signature: quixe_get_signature,
     get_vm_internals: quixe_get_vm_self,
@@ -6767,9 +6799,12 @@ return {
     do_autosave: vm_autosave
 };
 
-}();
+};
+
+/* Quixe is an instance of QuixeClass, ready to init. */
+var Quixe = new QuixeClass();
 
 // Node-compatible behavior
-try { exports.Quixe = Quixe; } catch (ex) {};
+try { exports.Quixe = Quixe; exports.QuixeClass = QuixeClass; } catch (ex) {};
 
 /* End of Quixe library. */
