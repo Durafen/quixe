@@ -26,6 +26,12 @@ body {
 
 </style>
 
+<script>
+window.onerror = function(errorMsg, url, lineNumber) {
+  alert("Error occured: " + errorMsg);
+  return false;
+}
+</script>
 <script src="lib/jquery-1.12.4.min.js" type="text/javascript"></script>
 <script src="lib/glkote.min.js" type="text/javascript"></script>
 <script src="lib/quixe.min.js" type="text/javascript"></script>
